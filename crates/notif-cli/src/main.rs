@@ -737,8 +737,8 @@ fn run_macos(cmd: Command) -> Result<()> {
                 Ok(())
             }
         }
-        Command::Install | Command::Uninstall => {
-            bail!("`install` / `uninstall` are Windows-only subcommands")
+        Command::Install | Command::Uninstall | Command::ActivatorServe => {
+            bail!("`install` / `uninstall` / `activator-serve` are Windows-only subcommands")
         }
     }
 }
