@@ -5,8 +5,8 @@
 //!
 //! Bundle root : `$HOME/.local/share/notif/senders/<key>.app`. This deviates
 //! from Apple's `Application Support` convention on purpose — the decision
-//! locked at ROLLOUT time (see plans/notif-cli/ROLLOUT.md §Decisions) picks a
-//! path symmetric with the (future) Linux / Windows backends.
+//! locked at ROLLOUT time picks a path symmetric with the (future) Linux /
+//! Windows backends.
 
 use std::path::PathBuf;
 

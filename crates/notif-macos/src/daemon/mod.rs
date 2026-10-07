@@ -1,9 +1,7 @@
 //! `notif listen` daemon — per-sender long-lived process owning the UN
 //! center delegate and the callback registry.
 //!
-//! Session 7b of the notif-cli rollout. See
-//! `plans/notif-cli/EXISTING.md § notif listen daemon architecture` for
-//! the full design.
+//! Session 7b of the notif-cli rollout.
 //!
 //! # Runtime layout
 //!

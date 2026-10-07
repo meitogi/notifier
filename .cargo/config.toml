@@ -6,8 +6,8 @@
 # path and `libobjc` via the `-L` search path — all pointing at our
 # vendored `.tbd` stubs under `vendor/macos-sdk/`.
 #
-# Paths are relative to cargo's cwd (the workspace root at
-# `apps/notifier/`). Session 3.5 restored this file after session 3
+# Paths are relative to cargo's cwd (the workspace root, i.e. the
+# repository root). Session 3.5 restored this file after session 3
 # drafted then deleted it; zig 0.16.0's TBD-v4 parser handles the
 # vendored Foundation.tbd that zig 0.14/0.15 SIGSEGV'd on.
 

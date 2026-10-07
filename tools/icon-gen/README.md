@@ -10,7 +10,7 @@ with a small header — no third-party encoder needed).
 
 ## Usage
 
-From the workspace root (`apps/notifier`) :
+From the workspace root :
 
 ```bash
 cargo run -p notif-icon-gen -- \
@@ -61,9 +61,8 @@ site that ships later. Committing it is optional.
 
 `notify.svg` is the source of truth for the default icon. Palette :
 `#EA692E` orange rounded-square field, `#FEFEFE` white bell-shaped `n`
-glyph + clapper dot. Concept documented in
-[`plans/notif-cli/scratch/icon-concepts.md`](../../../../plans/notif-cli/scratch/icon-concepts.md)
-(hybrid of Direction 5 + Direction 1, decided in session 6).
+glyph + clapper dot (hybrid of Direction 5 + Direction 1, decided in
+session 6).
 
 Source paths are drawn to a 746×746 bounding box centered on (512, 512).
 The SVG wraps them in a `<g transform="translate(512 512) scale(1.105)

@@ -8,7 +8,7 @@
 #   vendor/fetch-sdk.sh                # default : 14.5
 #   vendor/fetch-sdk.sh 15.5           # bump when zig upstream fixes #24615
 #
-# Requires : `curl`, `tar` (xz-aware). Runs from `apps/notifier/` (or any cwd
+# Requires : `curl`, `tar` (xz-aware). Runs from the workspace root (or any cwd
 # with vendor/macos-sdk/ reachable via relative traversal from the script's
 # own directory).
 set -euo pipefail

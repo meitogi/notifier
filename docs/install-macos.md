@@ -7,13 +7,12 @@ plist).
 
 ## 1. Obtain the binary
 
-Until v0.5 (session N-2) publishes signed release artefacts, the binary
-is cross-compiled from the Linux devcontainer.
+Until tagged releases publish artefacts, the binary is cross-compiled
+from the Linux devcontainer.
 
-From the devcontainer :
+From the root of this repository, inside the devcontainer :
 
 ```bash
-cd apps/notifier
 cargo zigbuild --target aarch64-apple-darwin --release --bin notif
 # → target/aarch64-apple-darwin/release/notif   (Apple Silicon)
 
@@ -360,8 +359,10 @@ lets us wire. Beyond that it's OS policy.
 
 ## 8. Notify daemon integration (v0.2)
 
-This project also ships a Node.js **notify-queue daemon** at
-[.devcontainer/notify/](../../.devcontainer/notify/) — spawned on every
+The main consumer of `notif` is a Node.js **notify-queue daemon** — the
+`notify/` directory of
+[meitogi/devcontainer-cli](https://github.com/meitogi/devcontainer-cli),
+whose paths below are relative to that package. It is spawned on every
 devcontainer open, watches Claude Code's event queue, and dispatches
 desktop notifications. Session 8 wired an alternative dispatch path
 through `notif` so the daemon inherits all the sender / dismiss /
@@ -416,13 +417,13 @@ consumer is the devcontainer's Claude Code notification path — every
 banner dispatched through it appears in Notification Center under the
 display name **"Claude Code"** with the bundled Claude Code icon
 (sourced from the VS Code Marketplace extension, wrapped into a minimal
-`.icns` at [.devcontainer/notify/vendor/senders/claude-code.icns](../../.devcontainer/notify/vendor/senders/claude-code.icns)).
+`.icns` at `notify/vendor/senders/claude-code.icns`).
 
 At daemon boot, `notify-app.js` runs the equivalent of :
 
 ```bash
 notif register --sender claude-code --name "Claude Code" \
-  --icon .devcontainer/notify/vendor/senders/claude-code.icns
+  --icon notify/vendor/senders/claude-code.icns
 ```
 
 `notif register` is idempotent — no-op after the first boot. On failure
@@ -442,7 +443,7 @@ exact banner from Notification Center. Post-fire tracking is in-memory
 persistence, no coordination across daemon restarts.
 
 **Payload contract — sender + notif_id.** Every queue line written by
-[hook.js](../../.devcontainer/skills/notify-queue/hook.js) carries two
+the `notify-queue` skill's `hook.js` carries two
 fields the daemon threads into `notif send` :
 
 - `sender` — placeholder `'default'` in v0.2. The `notify` consumer
@@ -453,8 +454,8 @@ fields the daemon threads into `notif send` :
   `notif send --id X` round-trip so `notif remove --id X` addresses
   the exact banner.
 
-Both fields are also written to the JSONL queue file under
-`.devcontainer/notify/queue/` so an operator can `tail -f` and see
+Both fields are also written to the JSONL queue file under the
+project's `.devcontainer/tmp/notify/` so an operator can `tail -f` and see
 what the daemon is routing.
 
 ## Troubleshooting

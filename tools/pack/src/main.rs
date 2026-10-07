@@ -5,7 +5,7 @@
 //! requested target, then zips the resulting `notif.exe` into
 //! `target/dist/notif-<version>-<arch>.zip`.
 //!
-//! Invoke from `apps/notifier/` :
+//! Invoke from the workspace root :
 //!
 //! ```text
 //! cargo run -p notif-pack --release                 # aarch64 (default)
