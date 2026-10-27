@@ -20,6 +20,8 @@
 # when it materializes its app bundle (docs/install-macos.md § 2). Real
 # signing would need a macOS runner and secrets.
 #
+# The release notes are the tag's annotation: tag with `git tag -a`.
+#
 # Packaging is `cargo run -p notif-pack -- --all`, the same command a
 # maintainer runs locally: four zips plus SHA256SUMS in target/dist/.
 #
@@ -75,6 +77,17 @@ jobs:
         run: |
           if [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
             echo "::error::tag ${GITHUB_REF_NAME} != Cargo.toml version v${VERSION} — bump [workspace.package] version first"
+            exit 1
+          fi
+
+      # The release notes are the annotation (--notes-from-tag); a lightweight
+      # tag would publish the commit message instead.
+      - name: tag is annotated
+        if: github.ref_type == 'tag'
+        run: |
+          git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+          if [ "$(git cat-file -t "${GITHUB_REF_NAME}")" != "tag" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} is lightweight — the release notes live in the annotation: git tag -a"
             exit 1
           fi
 
@@ -149,7 +162,7 @@ jobs:
             --draft \
             --verify-tag \
             --title "notif ${VERSION}" \
-            --notes "macOS (aarch64, x64) and Windows (aarch64, x64) binaries of notif ${VERSION}. Verify a download with \`sha256sum -c SHA256SUMS --ignore-missing\` (macOS: \`shasum -a 256 -c SHA256SUMS --ignore-missing\`). Install: docs/install-macos.md, docs/install-windows.md."
+            --notes-from-tag
 
       - name: what to do next
         env:
