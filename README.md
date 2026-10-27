@@ -18,13 +18,16 @@ which dispatches through `notif` when `NOTIFY_CHANNELS` lists `notify`.
 
 ## Install
 
-- **macOS** — [docs/install-macos.md](docs/install-macos.md) (cross-compile
-  from the devcontainer, first-run Gatekeeper bypass, permission dialog,
+Binaries for macOS and Windows (aarch64 and x64) are on the
+[releases page](https://github.com/meitogi/notifier/releases), with a
+`SHA256SUMS` file to verify them against.
+
+- **macOS** — [docs/install-macos.md](docs/install-macos.md) (download
+  or build from source, first-run Gatekeeper bypass, permission dialog,
   housekeeping).
 - **Windows** — shipped since 0.2.x : WinRT toasts under a per-sender
   AUMID, `--on-action` / `--on-timeout` callbacks through a COM activator.
-  Build the zip with `cargo run -p notif-pack --release` (see
-  [tools/pack/src/main.rs](tools/pack/src/main.rs)), unpack it on the
-  host and run `notif install` once — it copies the binary into
+  [docs/install-windows.md](docs/install-windows.md) : download the zip,
+  run `notif install` once — it copies the binary into
   `%LOCALAPPDATA%\notif\` and puts that directory on the user `Path`.
 - **Linux** — not implemented ; `notif-linux` is a stub.

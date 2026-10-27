@@ -7,8 +7,22 @@ plist).
 
 ## 1. Obtain the binary
 
-Until tagged releases publish artefacts, the binary is cross-compiled
-from the Linux devcontainer.
+Download the zip for your Mac and `SHA256SUMS` from the
+[releases page](https://github.com/meitogi/notifier/releases) —
+`notif-<version>-macos-aarch64.zip` for Apple Silicon,
+`notif-<version>-macos-x64.zip` for Intel. Then, in the download
+directory :
+
+```bash
+shasum -a 256 -c SHA256SUMS --ignore-missing
+unzip notif-<version>-macos-aarch64.zip
+mkdir -p ~/bin && cp notif-<version>-macos-aarch64/notif ~/bin/notif
+```
+
+`shasum` must print `OK` for the zip you downloaded. Put `~/bin` on
+`PATH`. The zip keeps the executable bit ; § 2 covers the first launch.
+
+### Building from source
 
 From the root of this repository, inside the devcontainer :
 
@@ -21,11 +35,10 @@ cargo zigbuild --target x86_64-apple-darwin --release --bin notif
 # → target/x86_64-apple-darwin/release/notif
 ```
 
-The `target/` tree is bind-mounted to the Mac host under the workspace
-root — no `scp` needed. Copy the binary to a stable location, e.g.
-`~/bin/notif`, and put that directory on `PATH`.
-
-### Building from source
+`cargo run -p notif-pack --release -- --macos` builds both and zips them
+the way a release does (`target/dist/`, with `SHA256SUMS`). The
+`target/` tree is bind-mounted to the Mac host under the workspace
+root — no `scp` needed.
 
 The cross-compile relies on a vendored subset of the **macOS 14.5 SDK
 stubs** at [../vendor/macos-sdk/](../vendor/macos-sdk/) (four
@@ -72,8 +85,10 @@ Strip the quarantine bit once, per binary :
 xattr -d com.apple.quarantine ~/bin/notif
 ```
 
-Session N-2 will produce Developer-ID-signed + notarized binaries when
-the rollout matures ; this manual step will disappear then.
+Release binaries are ad-hoc signed too : there is no Developer ID
+signature or notarization yet. A zip downloaded with `curl` or
+`gh release download` carries no quarantine attribute ; one downloaded
+through a browser does, and needs the command above.
 
 ## 3. First `notif send` — permission dialog
 
