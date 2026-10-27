@@ -1,0 +1,169 @@
+# Release notif as a DRAFT GitHub Release.
+#
+# One release per pushed tag. The version comes from [workspace.package] in
+# Cargo.toml — bump it there before tagging; the `guard` job fails on purpose
+# if the two disagree.
+#
+# This workflow STAGES; it does not publish. The release is created as a
+# draft with every asset attached. A maintainer downloads the assets, checks
+# them against SHA256SUMS, and publishes the draft from the release page — or
+# deletes it and pushes a fixed tag. Nothing this workflow does is
+# irreversible: a draft has no downloads and no public URL.
+#
+# Every tag cross-builds the macOS binaries. That is the regression guard that
+# was missing when the macOS dispatch stopped compiling (E0004, unnoticed for
+# months because nothing built macOS on a schedule).
+#
+# All four targets cross-compile on one Linux runner: cargo-zigbuild with zig
+# as the linker, against the macOS SDK stubs vendored under vendor/macos-sdk/.
+# macOS binaries carry no Developer ID signature; notif applies an ad-hoc one
+# when it materializes its app bundle (docs/install-macos.md § 2). Real
+# signing would need a macOS runner and secrets.
+#
+# Packaging is `cargo run -p notif-pack -- --all`, the same command a
+# maintainer runs locally: four zips plus SHA256SUMS in target/dist/.
+#
+# Third-party actions are pinned to commit SHAs (comment = tag at pin time,
+# 2026-10-27); bump deliberately, never float. The toolchain is pinned too
+# (rust, zig + its tarball checksum, cargo-zigbuild) so a tag rebuilds the
+# same bytes it was tested with.
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Rehearse: build and package, create no release'
+        type: boolean
+        default: true
+
+# Nothing by default; each job asks for exactly what it needs.
+permissions: {}
+
+env:
+  # Overrides rust-toolchain.toml's floating `stable` for release builds.
+  RUSTUP_TOOLCHAIN: '1.99.1'
+  ZIG_VERSION: '0.14.0'
+  ZIG_SHA256: '473ec26806133cf4d1918caf1a410f8403a13d979726a9045b421b685031a982'
+  CARGO_ZIGBUILD_VERSION: '0.24.0'
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - id: meta
+        run: |
+          v="$(sed -n '/^\[workspace\.package\]/,/^\[/s/^version = "\(.*\)"$/\1/p' Cargo.toml)"
+          if [ -z "$v" ]; then
+            echo "::error::no version in [workspace.package] of Cargo.toml"
+            exit 1
+          fi
+          echo "version=${v}" >> "$GITHUB_OUTPUT"
+
+      - name: tag matches Cargo.toml version
+        if: github.ref_type == 'tag'
+        env:
+          VERSION: ${{ steps.meta.outputs.version }}
+        run: |
+          if [ "${GITHUB_REF_NAME}" != "v${VERSION}" ]; then
+            echo "::error::tag ${GITHUB_REF_NAME} != Cargo.toml version v${VERSION} — bump [workspace.package] version first"
+            exit 1
+          fi
+
+      - name: rust toolchain
+        run: rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal
+
+      - name: unit tests
+        run: cargo test --workspace --lib
+
+  build:
+    needs: guard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: rust toolchain and the four targets
+        run: |
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal \
+            --target aarch64-apple-darwin,x86_64-apple-darwin,aarch64-pc-windows-gnullvm,x86_64-pc-windows-gnullvm
+
+      - name: zig
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/zig.tar.xz" \
+            "https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
+          echo "${ZIG_SHA256}  $RUNNER_TEMP/zig.tar.xz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/zig"
+          tar -xJf "$RUNNER_TEMP/zig.tar.xz" -C "$RUNNER_TEMP/zig" --strip-components=1
+          echo "$RUNNER_TEMP/zig" >> "$GITHUB_PATH"
+
+      - name: cargo-zigbuild
+        run: cargo install --locked cargo-zigbuild --version "$CARGO_ZIGBUILD_VERSION"
+
+      # No cache anywhere in this job: a release build starts from the tag.
+      # Expected warning on the macOS targets: `invoking "xcrun" ... failed`
+      # (benign, see .cargo/config.toml).
+      - name: build and package
+        run: cargo run -p notif-pack --release -- --all
+
+      - name: checksums verify
+        working-directory: target/dist
+        run: |
+          sha256sum -c SHA256SUMS
+          ls -l
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: notif-${{ needs.guard.outputs.version }}
+          path: target/dist/
+          if-no-files-found: error
+
+  release:
+    needs: [guard, build]
+    if: github.ref_type == 'tag' && !inputs.dry_run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write             # create the draft release and upload its assets
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: notif-${{ needs.guard.outputs.version }}
+          path: dist
+
+      - name: create the draft release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --draft \
+            --verify-tag \
+            --title "notif ${VERSION}" \
+            --notes "macOS (aarch64, x64) and Windows (aarch64, x64) binaries of notif ${VERSION}. Verify a download with \`sha256sum -c SHA256SUMS --ignore-missing\` (macOS: \`shasum -a 256 -c SHA256SUMS --ignore-missing\`). Install: docs/install-macos.md, docs/install-windows.md."
+
+      - name: what to do next
+        env:
+          VERSION: ${{ needs.guard.outputs.version }}
+        run: |
+          {
+            echo "### Draft release: notif ${VERSION}"
+            echo
+            echo "Not public yet. Review it, then publish it — or delete it."
+            echo
+            echo '```'
+            echo "gh release download ${GITHUB_REF_NAME} -R ${GITHUB_REPOSITORY} -D notif-${VERSION}"
+            echo "cd notif-${VERSION} && sha256sum -c SHA256SUMS"
+            echo '```'
+            echo
+            echo "Then on the release page: Edit → Publish release."
+          } >> "$GITHUB_STEP_SUMMARY"

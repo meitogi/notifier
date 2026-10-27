@@ -661,6 +661,8 @@ name = "notif-pack"
 version = "0.3.0"
 dependencies = [
  "anyhow",
+ "hex",
+ "sha2",
  "zip",
 ]
 

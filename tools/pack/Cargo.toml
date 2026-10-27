@@ -3,7 +3,7 @@ name = "notif-pack"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Dev tool: bundle notif.exe release build into a zip for host handoff."
+description = "Dev and release tool: zip the notif release builds and write SHA256SUMS."
 
 [[bin]]
 name = "notif-pack"
@@ -11,4 +11,6 @@ path = "src/main.rs"
 
 [dependencies]
 anyhow = "1"
+hex = "0.4"
+sha2 = "0.11"
 zip = { version = "8.6.0", default-features = false, features = ["deflate"] }
